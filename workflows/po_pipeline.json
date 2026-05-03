@@ -1,0 +1,153 @@
+{
+  "name": "PO Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "={{ $env.HOME }}/incoming",
+        "triggerOn": "fileCreated"
+      },
+      "id": "trigger-watch-folder",
+      "name": "Watch Incoming Folder",
+      "type": "n8n-nodes-base.localFileTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/upload-po",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "parameterType": "formBinaryData",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-upload-po",
+      "name": "Upload PO to API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.validation_report.flagged }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "if-has-exceptions",
+      "name": "Has Exceptions?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "buyer@retailer.com",
+        "subject": "=PO {{ $json.po_number }} — Exceptions Require Attention",
+        "emailType": "text",
+        "message": "={{ $json.exception_summary.email_draft }}",
+        "options": {}
+      },
+      "id": "gmail-send-exception",
+      "name": "Email Buyer: Exceptions Found",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [980, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PLACEHOLDER_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "#ops",
+        "text": "=PO {{ $json.po_number }} processed successfully — all {{ $json.validation_report.total_lines }} lines passed validation.",
+        "otherOptions": {}
+      },
+      "id": "slack-success",
+      "name": "Slack: PO Processed Clean",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [980, 420],
+      "credentials": {
+        "slackApi": {
+          "id": "PLACEHOLDER_SLACK_CREDENTIAL_ID",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "po_number",
+              "value": "={{ $json.po_number }}"
+            },
+            {
+              "name": "status",
+              "value": "={{ $json.status }}"
+            },
+            {
+              "name": "flagged",
+              "value": "={{ $json.validation_report.flagged }}"
+            },
+            {
+              "name": "logged_at",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-log-result",
+      "name": "Set Log Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1240, 300]
+    }
+  ],
+  "connections": {
+    "Watch Incoming Folder": {
+      "main": [[{"node": "Upload PO to API", "type": "main", "index": 0}]]
+    },
+    "Upload PO to API": {
+      "main": [[{"node": "Has Exceptions?", "type": "main", "index": 0}]]
+    },
+    "Has Exceptions?": {
+      "main": [
+        [{"node": "Email Buyer: Exceptions Found", "type": "main", "index": 0}],
+        [{"node": "Slack: PO Processed Clean",     "type": "main", "index": 0}]
+      ]
+    },
+    "Email Buyer: Exceptions Found": {
+      "main": [[{"node": "Set Log Fields", "type": "main", "index": 0}]]
+    },
+    "Slack: PO Processed Clean": {
+      "main": [[{"node": "Set Log Fields", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-05-03T00:00:00.000Z",
+  "versionId": "1"
+}

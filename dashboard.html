@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PO Pipeline · Evolution Design Lab</title>
+<style>
+/* ── Reset & tokens ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #f0f2f5;
+  --surface:    #ffffff;
+  --surface2:   #f6f8fa;
+  --border:     #d0d7de;
+  --text:       #1f2328;
+  --muted:      #656d76;
+  --accent:     #0969da;
+  --accent-bg:  #ddf4ff;
+  --ok:         #1a7f37;
+  --ok-bg:      #dafbe1;
+  --ok-border:  #82cfb0;
+  --warn:       #9a6700;
+  --warn-bg:    #fff8c5;
+  --warn-border:#d4a72c;
+  --danger:     #cf222e;
+  --danger-bg:  #ffebe9;
+  --danger-border:#ff8182;
+  --qty:        #6639ba;
+  --qty-bg:     #fbefff;
+  --qty-border: #c398f5;
+  --r:          8px;
+  --r-sm:       5px;
+  --shadow:     0 1px 3px rgba(31,35,40,.12), 0 0 0 1px rgba(31,35,40,.06);
+  --shadow-sm:  0 1px 0 rgba(31,35,40,.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:         #0d1117;
+    --surface:    #161b22;
+    --surface2:   #1c2128;
+    --border:     #30363d;
+    --text:       #e6edf3;
+    --muted:      #7d8590;
+    --accent:     #58a6ff;
+    --accent-bg:  #0d2b45;
+    --ok:         #3fb950;
+    --ok-bg:      #0a2d16;
+    --ok-border:  #2ea043;
+    --warn:       #d29922;
+    --warn-bg:    #271d04;
+    --warn-border:#9e6a03;
+    --danger:     #f85149;
+    --danger-bg:  #300b0b;
+    --danger-border:#da3633;
+    --qty:        #c5a3ff;
+    --qty-bg:     #1e1240;
+    --qty-border: #7948d4;
+    --shadow:     0 1px 3px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.04);
+    --shadow-sm:  0 1px 0 rgba(0,0,0,.3);
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Header ───────────────────────────────────────────────────── */
+.header {
+  position: sticky; top: 0; z-index: 200;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  height: 52px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 20px;
+  box-shadow: var(--shadow-sm);
+}
+.h-logo { font-size: 22px; line-height: 1; }
+.h-name { font-weight: 700; font-size: 15px; letter-spacing: -.3px; }
+.h-sub  { font-size: 11px; color: var(--muted); }
+.h-spacer { flex: 1; }
+.h-updated { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ── Layout ───────────────────────────────────────────────────── */
+.main { max-width: 1280px; margin: 0 auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Card ─────────────────────────────────────────────────────── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow); }
+.card-hd {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 7px;
+}
+.card-bd { padding: 16px; }
+
+/* ── Upload ───────────────────────────────────────────────────── */
+.drop-zone {
+  position: relative;
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.drop-zone:hover, .drop-zone.over {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.drop-zone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer;
+}
+.dz-icon  { font-size: 28px; margin-bottom: 6px; }
+.dz-label { font-weight: 600; margin-bottom: 3px; }
+.dz-hint  { font-size: 12px; color: var(--muted); }
+.dz-btn {
+  display: inline-block; margin-top: 10px;
+  padding: 6px 16px;
+  background: var(--accent); color: #fff;
+  border-radius: var(--r-sm); font-size: 13px; font-weight: 600;
+  pointer-events: none;
+}
+.upload-msg {
+  margin-top: 10px; min-height: 20px;
+  font-size: 13px; font-weight: 500;
+}
+.upload-msg.ok     { color: var(--ok); }
+.upload-msg.error  { color: var(--danger); }
+.upload-msg.busy   { color: var(--accent); }
+
+/* ── PO summary bar ───────────────────────────────────────────── */
+.po-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 14px 18px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 18px;
+}
+.po-empty { color: var(--muted); font-size: 13px; }
+.pof { display: flex; flex-direction: column; gap: 1px; }
+.pof-l { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.pof-v { font-size: 14px; font-weight: 700; }
+.po-sep { width: 1px; height: 36px; background: var(--border); }
+.pill-row { display: flex; gap: 8px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 11px; border-radius: 20px;
+  font-size: 12px; font-weight: 700; border: 1px solid;
+}
+.pill.ok   { color: var(--ok);    background: var(--ok-bg);    border-color: var(--ok-border); }
+.pill.flag { color: var(--danger); background: var(--danger-bg); border-color: var(--danger-border); }
+.pill-dot  { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r) var(--r) 0 0;
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: 11px 16px;
+  font-size: 13px; font-weight: 600;
+  color: var(--muted);
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer; white-space: nowrap;
+  transition: color .12s;
+  margin-bottom: -1px;
+}
+.tab-btn.on { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-btn:hover:not(.on) { color: var(--text); }
+.tab-pane { display: none; }
+.tab-pane.on { display: block; }
+
+/* ── Filter bar ───────────────────────────────────────────────── */
+.filter-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.fb {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all .12s;
+}
+.fb:hover  { border-color: var(--accent); color: var(--accent); }
+.fb.on     { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fb-n      { font-size: 10px; padding: 0 4px; border-radius: 8px; background: rgba(0,0,0,.12); }
+.fb.on .fb-n { background: rgba(255,255,255,.25); }
+.fb:not(.on) .fb-n { background: var(--surface2); }
+
+/* ── Table ────────────────────────────────────────────────────── */
+.t-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  text-align: left; padding: 8px 12px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); background: var(--surface2);
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+.t-sku { font-family: ui-monospace,"Cascadia Code","Fira Code",monospace; font-size: 11.5px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.t-num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.t-muted { color: var(--muted); font-size: 12px; }
+.p-ok   { color: var(--ok); font-weight: 600; }
+.p-bad  { color: var(--danger); font-weight: 700; }
+
+/* ── Badges ───────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: .1px;
+  border: 1px solid; white-space: nowrap;
+}
+.badge.ok               { color: var(--ok);     background: var(--ok-bg);     border-color: var(--ok-border); }
+.badge.stockout         { color: var(--danger);  background: var(--danger-bg);  border-color: var(--danger-border); }
+.badge.price_mismatch   { color: var(--warn);    background: var(--warn-bg);    border-color: var(--warn-border); }
+.badge.invalid_sku      { color: var(--danger);  background: var(--danger-bg);  border-color: var(--danger-border); }
+.badge.quantity_exceeded{ color: var(--qty);     background: var(--qty-bg);     border-color: var(--qty-border); }
+
+/* ── Exception type cards ─────────────────────────────────────── */
+.exc-summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.exc-type-card {
+  border: 1px solid; border-radius: var(--r);
+  overflow: hidden;
+}
+.exc-type-card.stockout         { border-color: var(--danger-border); }
+.exc-type-card.price_mismatch   { border-color: var(--warn-border); }
+.exc-type-card.invalid_sku      { border-color: var(--danger-border); }
+.exc-type-card.quantity_exceeded{ border-color: var(--qty-border); }
+.exc-type-card.zero { opacity: .45; }
+
+.exc-card-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+}
+.exc-type-card.stockout         .exc-card-hd { background: var(--danger-bg);  color: var(--danger); }
+.exc-type-card.price_mismatch   .exc-card-hd { background: var(--warn-bg);    color: var(--warn); }
+.exc-type-card.invalid_sku      .exc-card-hd { background: var(--danger-bg);  color: var(--danger); }
+.exc-type-card.quantity_exceeded .exc-card-hd{ background: var(--qty-bg);     color: var(--qty); }
+
+.exc-count-badge {
+  font-size: 18px; font-weight: 800; line-height: 1;
+}
+.exc-item-list { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+.exc-item {
+  font-size: 12px; padding: 6px 8px;
+  background: var(--surface2); border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+}
+.exc-item-sku { font-family: monospace; font-weight: 700; font-size: 11.5px; color: var(--accent); }
+.exc-item-note { color: var(--muted); margin-top: 2px; }
+.exc-none-label { padding: 12px; color: var(--muted); font-size: 12px; text-align: center; }
+
+/* ── AI summary panel ─────────────────────────────────────────── */
+.summary-pad { padding: 18px; }
+.sec-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); margin-bottom: 8px;
+}
+.narrative-box {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 14px; line-height: 1.75; font-size: 14px; margin-bottom: 18px;
+}
+.actions-list { display: flex; flex-direction: column; gap: 7px; }
+.action-row {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-size: 13px; line-height: 1.5;
+}
+.action-n { font-weight: 800; color: var(--accent); min-width: 18px; font-size: 12px; }
+
+/* ── Email panel ──────────────────────────────────────────────── */
+.email-bar {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 9px 14px; background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 13px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-sm); font-size: 12px; font-weight: 600;
+  cursor: pointer; color: var(--text); transition: all .12s;
+}
+.copy-btn:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+.email-draft {
+  padding: 18px 20px;
+  white-space: pre-wrap;
+  font-family: ui-monospace,"Cascadia Code","Fira Code",monospace;
+  font-size: 12.5px; line-height: 1.65;
+  background: var(--surface2);
+  border-radius: 0 0 var(--r) var(--r);
+  overflow-x: auto;
+}
+
+/* ── State boxes (loading / error / empty) ───────────────────── */
+.state-box {
+  padding: 40px 20px; text-align: center; color: var(--muted);
+}
+.state-box .s-icon { font-size: 38px; margin-bottom: 10px; }
+.state-box p { max-width: 340px; margin: 6px auto 0; font-size: 13px; line-height: 1.6; }
+
+.spinner {
+  display: inline-block; width: 22px; height: 22px;
+  border: 3px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .65s linear infinite; margin-bottom: 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-card {
+  margin: 16px;
+  background: var(--danger-bg); border: 1px solid var(--danger-border);
+  border-radius: var(--r); padding: 16px 18px;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.error-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.error-body { flex: 1; }
+.error-title { font-weight: 700; color: var(--danger); margin-bottom: 4px; }
+.error-msg   { font-size: 13px; color: var(--muted); }
+.retry-btn {
+  margin-top: 10px; padding: 5px 14px;
+  background: var(--danger); color: #fff;
+  border: none; border-radius: var(--r-sm);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.retry-btn:hover { opacity: .88; }
+
+@media (max-width: 640px) {
+  .po-sep { display: none; }
+  th, td { padding: 7px 8px; }
+  .exc-summary-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <span class="h-logo">👟</span>
+  <div>
+    <div class="h-name">PO Pipeline Dashboard</div>
+    <div class="h-sub">Evolution Design Lab · Wholesale Footwear</div>
+  </div>
+  <div class="h-spacer"></div>
+  <div class="h-updated" id="hUpdated"></div>
+</header>
+
+<main class="main">
+
+  <!-- ── Upload ── -->
+  <div class="card">
+    <div class="card-hd">📤 Upload Purchase Order</div>
+    <div class="card-bd">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".csv,.pdf">
+        <div class="dz-icon">📄</div>
+        <div class="dz-label">Drop a CSV or PDF here</div>
+        <div class="dz-hint">Accepted formats: .csv, .pdf · Posts to /upload-po</div>
+        <div class="dz-btn">Browse files</div>
+      </div>
+      <div class="upload-msg" id="uploadMsg"></div>
+    </div>
+  </div>
+
+  <!-- ── PO summary bar ── -->
+  <div class="po-bar" id="poBar">
+    <span class="po-empty" id="poBarEmpty">Loading purchase order data…</span>
+  </div>
+
+  <!-- ── Tab panel ── -->
+  <div class="card" style="padding:0;overflow:hidden">
+
+    <div class="tab-bar" id="tabBar">
+      <button class="tab-btn on" data-pane="lines">📋 Line Items</button>
+      <button class="tab-btn"    data-pane="exc">🚨 Exceptions</button>
+      <button class="tab-btn"    data-pane="ai">🤖 AI Summary</button>
+      <button class="tab-btn"    data-pane="email">✉️ Buyer Email</button>
+    </div>
+
+    <!-- Line Items pane -->
+    <div class="tab-pane on" id="pane-lines">
+      <div class="filter-row" id="filterRow"></div>
+      <div class="t-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Description</th>
+              <th class="t-num">Qty</th>
+              <th class="t-num">PO Price</th>
+              <th class="t-num">Expected</th>
+              <th class="t-num">In Stock</th>
+              <th>Delivery</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="tBody">
+            <tr><td colspan="9"><div class="state-box"><div class="spinner"></div><p>Loading line items…</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Exceptions pane -->
+    <div class="tab-pane" id="pane-exc">
+      <div class="exc-summary-grid" id="excSummaryGrid">
+        <!-- 4 type cards rendered here -->
+      </div>
+      <div id="excDetailBody" style="padding:0 16px 16px"></div>
+    </div>
+
+    <!-- AI Summary pane -->
+    <div class="tab-pane" id="pane-ai">
+      <div id="aiBody">
+        <div class="state-box"><div class="spinner"></div><p>Loading AI summary…</p></div>
+      </div>
+    </div>
+
+    <!-- Buyer Email pane -->
+    <div class="tab-pane" id="pane-email">
+      <div id="emailBody">
+        <div class="state-box"><div class="spinner"></div><p>Loading email draft…</p></div>
+      </div>
+    </div>
+
+  </div><!-- /card -->
+</main>
+
+<script>
+'use strict';
+
+const API    = 'http://localhost:8000';
+const DEFAULT_PO = 'PO-JCP-2026-0412';
+
+let activeFilter = 'all';
+let lastReport   = null;
+let lastExc      = null;
+
+/* ── Tab wiring ──────────────────────────────────────────────── */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById('pane-' + btn.dataset.pane).classList.add('on');
+  });
+});
+
+/* ── Upload / drag-drop ──────────────────────────────────────── */
+const dz      = document.getElementById('dropZone');
+const fi      = document.getElementById('fileInput');
+const upMsg   = document.getElementById('uploadMsg');
+
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  if (e.dataTransfer.files[0]) submitFile(e.dataTransfer.files[0]);
+});
+fi.addEventListener('change', () => { if (fi.files[0]) submitFile(fi.files[0]); });
+
+async function submitFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['csv', 'pdf'].includes(ext)) {
+    setUpMsg('Only .csv and .pdf files are accepted.', 'error'); return;
+  }
+  setUpMsg('⏳ Uploading and running pipeline…', 'busy');
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res  = await fetch(`${API}/upload-po`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) { setUpMsg('Upload error: ' + (data.detail || res.statusText), 'error'); return; }
+    const { validation_report: report, exception_summary: exc } = data;
+    setUpMsg(
+      `✅ PO ${data.po_number} processed — ${report.passed} passed, ${report.flagged} flagged.`,
+      'ok'
+    );
+    renderAll(report, exc);
+  } catch (err) {
+    setUpMsg('Upload failed: ' + err.message, 'error');
+  }
+  fi.value = '';
+}
+
+function setUpMsg(text, cls) {
+  upMsg.textContent = text;
+  upMsg.className   = 'upload-msg ' + (cls || '');
+}
+
+/* ── Initial load ────────────────────────────────────────────── */
+async function initialLoad() {
+  stamp('Loading…');
+  try {
+    const [rRes, eRes] = await Promise.all([
+      fetch(`${API}/report/${DEFAULT_PO}`),
+      fetch(`${API}/exceptions/${DEFAULT_PO}`)
+    ]);
+    if (!rRes.ok) {
+      const detail = rRes.status === 404
+        ? `No data found for ${DEFAULT_PO}. Upload a CSV or PDF to get started.`
+        : `API returned ${rRes.status}. Is uvicorn running on port 8000?`;
+      showGlobalError('Could not load PO data', detail);
+      stamp('No data');
+      return;
+    }
+    const report = await rRes.json();
+    const exc    = eRes.ok ? await eRes.json() : null;
+    renderAll(report, exc);
+  } catch (err) {
+    showGlobalError(
+      'API unreachable',
+      'Cannot connect to http://localhost:8000. ' +
+      'Start uvicorn with: uvicorn api.main:app --port 8000'
+    );
+    stamp('Offline');
+  }
+}
+
+/* ── showGlobalError ─────────────────────────────────────────── */
+function showGlobalError(title, msg) {
+  const html = `
+    <div class="error-card">
+      <div class="error-icon">⚠️</div>
+      <div class="error-body">
+        <div class="error-title">${esc(title)}</div>
+        <div class="error-msg">${esc(msg)}</div>
+        <button class="retry-btn" onclick="initialLoad()">↺ Retry</button>
+      </div>
+    </div>`;
+  document.getElementById('tBody').innerHTML =
+    `<tr><td colspan="9">${html}</td></tr>`;
+  document.getElementById('excSummaryGrid').innerHTML = html;
+  document.getElementById('aiBody').innerHTML    = html;
+  document.getElementById('emailBody').innerHTML = html;
+
+  const bar = document.getElementById('poBar');
+  bar.innerHTML = `<span class="po-empty">${esc(title)} — ${esc(msg)}</span>`;
+}
+
+/* ── renderAll ───────────────────────────────────────────────── */
+function renderAll(report, exc) {
+  lastReport = report; lastExc = exc;
+  activeFilter = 'all';
+  renderPoBar(report);
+  renderFilters(report);
+  renderTable(report);
+  renderExcCards(report);
+  renderAI(exc);
+  renderEmail(exc);
+  stamp(new Date().toLocaleTimeString());
+}
+
+function stamp(t) {
+  document.getElementById('hUpdated').textContent = 'Updated ' + t;
+}
+
+/* ── PO bar ──────────────────────────────────────────────────── */
+function renderPoBar(r) {
+  const bar = document.getElementById('poBar');
+  const retailer = r.line_results?.[0]?.line_item?.retailer ?? '—';
+  bar.innerHTML = `
+    <div class="pof"><span class="pof-l">PO Number</span><span class="pof-v">${esc(r.po_number)}</span></div>
+    <div class="po-sep"></div>
+    <div class="pof"><span class="pof-l">Retailer</span><span class="pof-v">${esc(retailer)}</span></div>
+    <div class="po-sep"></div>
+    <div class="pof"><span class="pof-l">Validated</span><span class="pof-v">${fmtDt(r.validated_at)}</span></div>
+    <div class="po-sep"></div>
+    <div class="pof"><span class="pof-l">Total Lines</span><span class="pof-v">${r.total_lines}</span></div>
+    <div class="po-sep"></div>
+    <div class="pill-row">
+      <span class="pill ok"><span class="pill-dot"></span>${r.passed} Passed</span>
+      <span class="pill flag"><span class="pill-dot"></span>${r.flagged} Flagged</span>
+    </div>`;
+}
+
+/* ── Filter bar ──────────────────────────────────────────────── */
+const FILTER_LABELS = {
+  all:               'All',
+  ok:                '✓ Passed',
+  stockout:          '⊗ Stockout',
+  price_mismatch:    '$ Price Mismatch',
+  invalid_sku:       '✕ Invalid SKU',
+  quantity_exceeded: '↑ Qty Exceeded',
+};
+
+function renderFilters(report) {
+  const counts = { all: report.total_lines };
+  report.line_results.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const row = document.getElementById('filterRow');
+  row.innerHTML = Object.entries(FILTER_LABELS)
+    .filter(([k]) => k === 'all' || counts[k])
+    .map(([k, lbl]) => `
+      <button class="fb${activeFilter === k ? ' on' : ''}" data-f="${k}">
+        ${lbl}<span class="fb-n">${counts[k] ?? 0}</span>
+      </button>`)
+    .join('');
+  row.querySelectorAll('.fb').forEach(b => b.addEventListener('click', () => {
+    activeFilter = b.dataset.f;
+    renderFilters(report);
+    renderTable(report);
+  }));
+}
+
+/* ── Line items table ────────────────────────────────────────── */
+function renderTable(report) {
+  const rows = activeFilter === 'all'
+    ? report.line_results
+    : report.line_results.filter(r => r.status === activeFilter);
+  const tbody = document.getElementById('tBody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="state-box"><div class="s-icon">🔍</div><p>No rows match this filter.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const li  = r.line_item;
+    const pm  = r.status === 'price_mismatch';
+    const exp = r.expected_price != null
+      ? `<span class="${pm ? 'p-bad' : 'p-ok'}">$${r.expected_price.toFixed(2)}</span>` : '—';
+    return `
+      <tr>
+        <td><span class="t-sku">${esc(li.sku)}</span></td>
+        <td>${esc(li.description)}</td>
+        <td class="t-num">${li.quantity}</td>
+        <td class="t-num">$${li.unit_price.toFixed(2)}</td>
+        <td class="t-num">${exp}</td>
+        <td class="t-num${r.available_stock === 0 ? ' p-bad' : ''}">${r.available_stock ?? '—'}</td>
+        <td class="t-muted">${esc(li.requested_delivery)}</td>
+        <td>${badge(r.status)}</td>
+        <td class="t-muted" style="max-width:200px;font-size:12px">${esc(r.notes)}</td>
+      </tr>`;
+  }).join('');
+}
+
+function badge(status) {
+  const map = {
+    ok:               '✓ OK',
+    stockout:         '⊗ Stockout',
+    price_mismatch:   '$ Mismatch',
+    invalid_sku:      '✕ Invalid SKU',
+    quantity_exceeded:'↑ Qty Exceeded',
+  };
+  return `<span class="badge ${status}">${map[status] ?? status}</span>`;
+}
+
+/* ── Exception type cards ────────────────────────────────────── */
+const EXC_TYPES = [
+  { key: 'stockout',          icon: '⊗', label: 'Stockout',          hint: 'Stock unavailable' },
+  { key: 'price_mismatch',    icon: '$', label: 'Price Mismatch',     hint: 'Price outside 5% tolerance' },
+  { key: 'invalid_sku',       icon: '✕', label: 'Invalid SKU',        hint: 'Not in inventory' },
+  { key: 'quantity_exceeded', icon: '↑', label: 'Qty Exceeded',       hint: 'Over max order qty' },
+];
+
+function renderExcCards(report) {
+  const grouped = {};
+  report.line_results.forEach(r => {
+    if (r.status !== 'ok') (grouped[r.status] ??= []).push(r);
+  });
+
+  // 4 summary cards
+  document.getElementById('excSummaryGrid').innerHTML = EXC_TYPES.map(t => {
+    const items = grouped[t.key] ?? [];
+    const zero  = items.length === 0;
+    return `
+      <div class="exc-type-card ${t.key}${zero ? ' zero' : ''}">
+        <div class="exc-card-hd">
+          <span>${t.icon} ${t.label}</span>
+          <span class="exc-count-badge">${items.length}</span>
+        </div>
+        <div class="exc-item-list">
+          ${zero
+            ? `<div class="exc-none-label">None</div>`
+            : items.map(r => `
+                <div class="exc-item">
+                  <div class="exc-item-sku">${esc(r.line_item.sku)}</div>
+                  <div class="exc-item-note">${esc(r.notes)}</div>
+                </div>`).join('')
+          }
+        </div>
+      </div>`;
+  }).join('');
+
+  // detail section below the grid
+  const total = Object.values(grouped).reduce((s, a) => s + a.length, 0);
+  document.getElementById('excDetailBody').innerHTML = total === 0
+    ? `<div class="state-box" style="padding:24px"><div class="s-icon">✅</div>
+       <p>All ${report.total_lines} line items passed validation.</p></div>`
+    : '';
+}
+
+/* ── AI summary ──────────────────────────────────────────────── */
+function renderAI(exc) {
+  const el = document.getElementById('aiBody');
+  if (!exc || exc.message) {
+    el.innerHTML = `<div class="state-box"><div class="s-icon">✅</div>
+      <p>${esc(exc?.message ?? 'No exception summary available.')}</p></div>`;
+    return;
+  }
+  const actions = (exc.recommended_actions ?? []).map((a, i) =>
+    `<div class="action-row"><span class="action-n">${i+1}</span><span>${esc(a)}</span></div>`
+  ).join('');
+  el.innerHTML = `
+    <div class="summary-pad">
+      <div class="sec-label">Claude's Narrative</div>
+      <div class="narrative-box">${esc(exc.narrative)}</div>
+      <div class="sec-label">Recommended Actions</div>
+      <div class="actions-list">${actions}</div>
+    </div>`;
+}
+
+/* ── Buyer email ─────────────────────────────────────────────── */
+function renderEmail(exc) {
+  const el = document.getElementById('emailBody');
+  if (!exc || exc.message || !exc.email_draft) {
+    el.innerHTML = `<div class="state-box"><div class="s-icon">✉️</div>
+      <p>${esc(exc?.message ?? 'No email draft available.')}</p></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="email-bar">
+      <button class="copy-btn" id="copyBtn">📋 Copy to clipboard</button>
+    </div>
+    <div class="email-draft" id="emailDraft">${esc(exc.email_draft)}</div>`;
+  document.getElementById('copyBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(exc.email_draft).then(() => {
+      const b = document.getElementById('copyBtn');
+      b.textContent = '✅ Copied!';
+      setTimeout(() => { b.textContent = '📋 Copy to clipboard'; }, 2000);
+    });
+  });
+}
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDt(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleString(undefined, {dateStyle:'short',timeStyle:'short'}); }
+  catch { return iso; }
+}
+
+/* ── Boot ────────────────────────────────────────────────────── */
+initialLoad();
+</script>
+
+<footer style="
+  text-align:center;
+  padding:16px 20px;
+  font-size:11px;
+  color:var(--muted);
+  border-top:1px solid var(--border);
+  margin-top:8px;
+">
+  This project uses fictional purchase order data for demonstration purposes only.
+  All retailer names (JCPenney, DSW, Famous Footwear) are referenced solely as realistic
+  stand-ins and are not affiliated with or endorsing this project.
+</footer>
+</body>
+</html>

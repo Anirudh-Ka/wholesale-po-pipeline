@@ -1,0 +1,13 @@
+po_number,retailer,submitted_date,sku,description,quantity,unit_price,requested_delivery
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-PUMP-BLK-7,Women's Classic Pump Black Size 7,60,28.50,2026-06-15
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-SANDAL-TAN-8,Women's Strappy Sandal Tan Size 8,40,22.00,2026-06-15
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-BOOT-BLK-7,Women's Ankle Boot Black Size 7,50,42.00,2026-06-15
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-FLAT-BGE-7,Women's Ballet Flat Beige Size 7,45,20.00,2026-06-15
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-SANDAL-WHT-7,Women's Strappy Sandal White Size 7,80,22.00,2026-06-30
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-SNEAKER-BLK-6,Women's Canvas Sneaker Black Size 6,35,18.50,2026-06-30
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-PUMP-RED-6.5,Women's Classic Pump Red Size 6.5,8,24.00,2026-06-30
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-WEDGE-BGE-9,Women's Espadrille Wedge Beige Size 9,10,38.50,2026-06-30
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-FAKE-SKU-001,Nonexistent Style A,25,19.99,2026-07-15
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-FAKE-SKU-002,Nonexistent Style B,30,24.99,2026-07-15
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-BOOT-BLK-8,Women's Ankle Boot Black Size 8,150,42.00,2026-07-15
+PO-JCP-2026-0412,JCPenney,2026-05-01,EDL-W-FLAT-BLK-8,Women's Ballet Flat Black Size 8,90,20.00,2026-07-15

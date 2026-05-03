@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem *)",
+      "Bash(Start-Sleep -Seconds 60)",
+      "Bash(Get-ChildItem -Path \"D:\\\\Coding\\\\po-pipeline\" -Recurse -Name)",
+      "PowerShell(netstat *)"
+    ]
+  }
+}
