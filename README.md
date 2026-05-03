@@ -88,15 +88,27 @@ files, view validation results, and copy the AI-drafted email with one click.
 Open `http://localhost:8000` after starting the API to access the full-featured ops
 dashboard:
 
-- **Upload** a CSV or PDF by drag-and-drop or file picker
-- **Line Items tab** — filterable table showing every line with status badge, PO price vs
-  expected price, stock on hand, and notes
-- **Exceptions tab** — colour-coded cards (Stockout / Price Mismatch / Invalid SKU / Qty
-  Exceeded) with per-item detail
-- **AI Summary tab** — Claude's plain-English narrative and numbered recommended actions
-- **Buyer Email tab** — ready-to-send email draft with one-click clipboard copy
+![Upload zone and PO summary bar](docs/dashboard-upload.png)
 
-> Add screenshots here — `docs/dashboard-lines.png`, `docs/dashboard-ai.png`, etc.
+After uploading a CSV or PDF the PO summary bar updates instantly and the four tabs
+populate with live data:
+
+**Line Items** — filterable table with status badges, PO price vs expected price, stock
+on hand, and per-line notes:
+
+![Line items table with status badges](docs/dashboard-line-items.png)
+
+**AI Summary** — Claude's plain-English narrative describing every exception category:
+
+![Claude narrative](docs/dashboard-ai-narrative.png)
+
+Followed by numbered recommended actions for the ops team:
+
+![Recommended actions](docs/dashboard-ai-actions.png)
+
+**Buyer Email** — ready-to-send draft with one-click clipboard copy:
+
+![Buyer email draft](docs/dashboard-email.png)
 
 ---
 
