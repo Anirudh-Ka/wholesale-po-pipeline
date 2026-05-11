@@ -6,7 +6,7 @@
 
 ## Project Description
 
-This pipeline automates purchase order processing for Evolution Design Lab, a wholesale
+This pipeline automates purchase order processing for a wholesale
 footwear company supplying JCPenney, Famous Footwear, and DSW. When a retailer submits a
 PO as a CSV or PDF, the system parses the line items, validates each one against live
 SQLite inventory, and uses the **Claude AI API** to generate plain-English exception
